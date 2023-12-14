@@ -1,0 +1,142 @@
+---
+title: "group project"
+author: "Holden Baranowski"
+date: "2023-11-28"
+output: word_document
+---
+
+```{r}
+library(readxl)
+library(SKTools)
+library(tidyverse)
+library(psych)
+
+GP <- read_xlsx("SOCI510_Group7_Housing Prices.xlsx")
+
+view(GP)
+```
+
+## Square Feet by Number of Bedrooms
+```{r}
+GP2 <-
+  GP %>% 
+  mutate(RoomCount = if_else(`Bedrooms` < 4, TRUE, FALSE)) 
+
+view(GP2)
+```
+
+
+# Central Tendency and Variability for Square Feet
+```{r}
+
+mean(GP2$SquareFeet, na.rm = T)
+median(GP2$SquareFeet, na.rm = T)
+
+max(GP2$SquareFeet, na.rm = T) - min(GP2$SquareFeet, na.rm = T)
+sd(GP2$SquareFeet, na.rm = T)
+
+GP2 %>% 
+  ggplot(., aes(x = SquareFeet, color = RoomCount, fill = RoomCount)) +
+  geom_density(alpha = .2) +
+  theme_minimal() +
+  labs(title = "Square Feet by Room Count") +
+  theme(legend.position = "top")
+
+
+
+```
+# Frequency of Room Count
+```{r}
+GP2 %>% 
+  ggplot(., aes(x = RoomCount)) +
+  geom_bar(stat = "count", width = .5, fill = "purple")
+
+GP2 %>% 
+  select(RoomCount) %>% 
+  frequencies()
+```
+
+
+# Independent T-Test
+
+We will conduct an Independent Samples T-test because there are exactly two distinct groups to compare for this analysis. Houses with less than 4 bedrooms (TRUE) and houses with 4 or more bedrooms (FALSE).    
+
+Step 1:    
+H0: μTRUE = μFALSE    
+H1: μTRUE ≠ μFALSE   
+
+Step 2:     
+Alpha = .05   
+The null hypothesis will be rejected if the p-value is less than .05 which will risk a Type 1 error 5% of the time.  
+
+Step 3:  
+t = 0.193
+p = 0.847
+
+Step 4: 
+
+Because the p-value is not less than .05, we fail to reject the null hypothesis. If the null hypothesis is true, the probability of these data or data more extreme is .85. There is no sufficient evidence to homes with 4 or more bedrooms have significantly different square footage than homes with less than 4 bedrooms
+```{r}
+
+t.test(GP2$SquareFeet ~ GP2$RoomCount)
+```
+## Square Feet by Neighborhoods 
+
+# Frequency of Neighborhoods
+```{r}
+GP2 %>% 
+  ggplot(., aes(x = Neighborhood)) +
+  geom_bar(stat = "count", width = .5, fill = "red")
+
+GP2 %>% 
+  select(Neighborhood) %>% 
+  frequencies()
+
+view
+```
+
+# ANOVA 
+We will be conducting an ANOVA because there are more than two groups (3) being compared in this analysis.   
+
+Step 1:  
+H0: μURBAN = μSUBURBAN = μRURAL  
+H1: NOT μURBAN = μSUBURBAN = μRURAL  
+
+Step 2:   
+Alpha = .05   
+The null hypothesis will be rejected if the p-value is less than .05 which will risk a Type 1 error 5% of the time.   
+
+Step 3:   
+F = 4.69
+p = < .001
+
+Step 4: 
+Because the p value is less than .05, we can reject the null hypothesis that there is no difference in square feet based on neighborhood. If we assume the null hypothesis is true, the probability of these data or data less likely is less than .001. Post-hoc testing will be completed to assess further. 
+
+# POST HOC
+
+Based on the results of the post-hoc test, the Urban homes have a significantly different (higher) average square footage compared to the suburban and rural homes.
+```{r}
+anova(aov(SquareFeet ~ Neighborhood, GP2))
+
+TukeyHSD(aov(SquareFeet ~ Neighborhood, GP2))
+
+GP2 %>% 
+  group_by(Neighborhood) %>% 
+  summarise(across(SquareFeet, ~round(mean(., na.rm = T))))
+```
+
+
+
+```{r}
+GP2$Price <- as.numeric(GP2$Price)
+GP2$SquareFeet <- as.numeric(GP2$SquareFeet)
+
+GP2 %>% 
+select(Price, SquareFeet) %>%
+  corr.test() %>%
+  corr_summary() %>%
+  filter(dv == "SquareFeet")
+  
+```
+
